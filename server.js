@@ -16,6 +16,34 @@ const pool = new Pool({
 });
 
 
+const maxRetries = 5;
+const retryDelay = 5000; // 5 seconds
+
+async function connectWithRetry(retries = maxRetries) {
+    try {
+        await pool.connect();
+        console.log('Conectado a la base de datos');
+    } catch (err) {
+        console.error('Error al conectar a la base de datos', err);
+        if (retries > 0) {
+            console.log(`Reintentando conexión en ${retryDelay / 1000} segundos...`);
+            setTimeout(() => connectWithRetry(retries - 1), retryDelay);
+        } else {
+            console.error('No se pudo conectar a la base de datos después de varios intentos');
+            process.exit(-1);
+        }
+    }
+}
+
+pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+    connectWithRetry();
+});
+
+// Initial connection
+connectWithRetry();
+
+
 // handling CORS
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", 
@@ -28,7 +56,7 @@ app.use((req, res, next) => {
 // route for handling requests from the Angular client
 app.get('/api/message', (req, res) => {
     res.json({ message: 
-            'Amo a mi bebe' });
+            'Conectado al puerto' });
 });
 
 // Probar conexión
